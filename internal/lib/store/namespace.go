@@ -1,55 +1,42 @@
 package store
 
-import (
-	"errors"
-	"regexp"
-)
+import "github.com/bieniucieniu/ltms/internal/lib/utils"
 
-var translationKeyRegex = regexp.MustCompile(`^[a-z0-9]{1,}(?:\.[a-z0-9]{1,})*$`)
+type namespace map[string]string
 
-type Namespace struct {
-	records map[string]string
-}
-
-func NewNamespace(init map[string]string) (*Namespace, error) {
-	ns := Namespace{
-		records: map[string]string{},
-	}
-	if init != nil {
-		for key := range init {
-			if !translationKeyRegex.MatchString(key) {
-				return nil, errors.Join(ErrInvalidKey, errors.New(key))
-			}
+func NewNamespace(init map[string]string) (namespace, error) {
+	ns := namespace{}
+	for key, value := range init {
+		if !keyRegex.MatchString(key) {
+			return nil, ErrInvalidKey
 		}
-		ns.records = init
+		ns[key] = value
 	}
 
-	return &ns, nil
+	return ns, nil
 }
 
-func (t *Namespace) AddRecord(key, value string) error {
-	if !translationKeyRegex.MatchString(key) {
+func MustNewNamespace(init map[string]string) namespace {
+	return utils.Must(NewNamespace(init))
+}
+
+func (ns namespace) Set(key, value string) error {
+	if !keyRegex.MatchString(key) {
 		return ErrInvalidKey
 	}
-	t.records[key] = value
+	ns[key] = value
 	return nil
 }
-func (t *Namespace) AddRecords(values map[string]string) error {
-	for key, value := range values {
-		if !translationKeyRegex.MatchString(key) {
-			return errors.Join(ErrInvalidKey, errors.New(key))
-		}
-		t.records[key] = value
+
+func (ns namespace) MustSet(key, value string) namespace {
+	if err := ns.Set(key, value); err != nil {
+		panic(err)
 	}
-	return nil
+	return ns
 }
 
-func (t *Namespace) RemoveRecord(key string) {
-	delete(t.records, key)
-}
-
-func (t *Namespace) RemoveRecords(keys []string) {
+func (ns namespace) Remove(keys ...string) {
 	for _, key := range keys {
-		delete(t.records, key)
+		delete(ns, key)
 	}
 }

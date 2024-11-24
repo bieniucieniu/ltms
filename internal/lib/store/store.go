@@ -1,45 +1,58 @@
 package store
 
-import (
-	"regexp"
-)
+import "github.com/bieniucieniu/ltms/internal/lib/utils"
 
-type Srore struct {
-	colections map[string]*Colection
+type Store struct {
+	colections map[string]*colection
 }
 
-func NewStore() *Srore {
-	return &Srore{colections: map[string]*Colection{}}
+func New() *Store {
+	return &Store{colections: map[string]*colection{}}
 }
 
-var codeRegex = regexp.MustCompile(`^[\w_]+$`)
-
-func (c *Srore) AddColection(codes []string, colection *Colection) error {
+func (s *Store) Set(col colection, codes ...string) error {
+	if col == nil {
+		col = colection{}
+	}
 	for _, code := range codes {
 		if !codeRegex.MatchString(code) {
 			return ErrInvalidKey
 		}
 	}
 	for _, code := range codes {
-
-		c.colections[code] = colection
+		s.colections[code] = &col
 	}
 	return nil
 }
 
-func (c *Srore) RemoveColection(code string, colection *Colection) error {
-	var ptr *Colection
-	for key, value := range c.colections {
+func (s *Store) MustSet(col colection, codes ...string) *Store {
+	return utils.Must(s, s.Set(col, codes...))
+}
+
+func (s *Store) Remove(code string) {
+	var ptr *colection = nil
+	for key, value := range s.colections {
 		if key == code {
 			ptr = value
 			break
 		}
 	}
-	for key, value := range c.colections {
+	for key, value := range s.colections {
 		if value == ptr {
-			delete(c.colections, key)
+			delete(s.colections, key)
 		}
 	}
+}
 
+func (s *Store) SetNamespace(ns namespace, colection string, nsCodes ...string) error {
+	c := s.colections[colection]
+	if c == nil {
+		return ErrNoSuchColection
+	}
+	c.Set(ns, nsCodes...)
 	return nil
+}
+
+func (s *Store) MustSetNamespace(ns namespace, colection string, nsCodes ...string) *Store {
+	return utils.Must(s, s.SetNamespace(ns, colection, nsCodes...))
 }
